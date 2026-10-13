@@ -1,0 +1,48 @@
+name: remind
+
+# Every evening: if nothing was written today, open a reminder issue (once per
+# day). If something was, close any reminders still open.
+on:
+  schedule:
+    - cron: "30 19 * * *" # 20:30 in London during summer time, 19:30 in winter
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 50
+
+      - name: open or close the reminder
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          today=$(TZ=Europe/London date +%Y-%m-%d)
+          label=$(TZ=Europe/London date '+%-d %b %Y')
+          wrote=$(git log --since="${today}T00:00:00" --format=%H -- entries | head -1)
+          open=$(gh issue list --state open --search "in:title TIL for" --json number,title -q '.[] | "\(.number)\t\(.title)"')
+          if [ -n "$wrote" ]; then
+            echo "$open" | while IFS="$(printf '\t')" read -r n title; do
+              [ -n "$n" ] && gh issue close "$n" --comment "Written. See you tomorrow."
+            done
+            exit 0
+          fi
+          echo "$open" | while IFS="$(printf '\t')" read -r n title; do
+            [ -n "$n" ] && [ "$title" != "TIL for $label" ] && gh issue close "$n" --comment "Skipped that day."
+          done
+          if ! echo "$open" | grep -q "TIL for $label"; then
+            gh issue create --title "TIL for $label" --body "What did you learn today? From the repo folder:
+
+\`\`\`bash
+./til \"what I learned today\"
+\`\`\`
+
+This issue closes itself once a note for today is pushed."
+          fi

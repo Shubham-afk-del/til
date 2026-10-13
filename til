@@ -1,0 +1,3 @@
+#!/bin/sh
+# Today I learned: ./til "what I learned"   (no argument prints today's notes)
+exec node "$(dirname "$0")/scripts/til.mjs" "$@"
