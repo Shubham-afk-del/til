@@ -29,13 +29,13 @@ jobs:
           wrote=$(git log --since="${today}T00:00:00" --format=%H -- entries | head -1)
           open=$(gh issue list --state open --search "in:title TIL for" --json number,title -q '.[] | "\(.number)\t\(.title)"')
           if [ -n "$wrote" ]; then
-            echo "$open" | while IFS="$(printf '\t')" read -r n title; do
-              [ -n "$n" ] && gh issue close "$n" --comment "Written. See you tomorrow."
+            printf '%s\n' "$open" | while IFS="$(printf '\t')" read -r n title; do
+              if [ -n "$n" ]; then gh issue close "$n" --comment "Written. See you tomorrow."; fi
             done
             exit 0
           fi
-          echo "$open" | while IFS="$(printf '\t')" read -r n title; do
-            [ -n "$n" ] && [ "$title" != "TIL for $label" ] && gh issue close "$n" --comment "Skipped that day."
+          printf '%s\n' "$open" | while IFS="$(printf '\t')" read -r n title; do
+            if [ -n "$n" ] && [ "$title" != "TIL for $label" ]; then gh issue close "$n" --comment "Skipped that day."; fi
           done
           if ! echo "$open" | grep -q "TIL for $label"; then
             body=$(printf 'What did you learn today? From the repo folder:\n\n    ./til "what I learned today"\n\nThis issue closes itself once a note for today is pushed.')
