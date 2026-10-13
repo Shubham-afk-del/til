@@ -1,8 +1,12 @@
 name: remind
 
 # Every evening: if nothing was written today, open a reminder issue (once per
-# day). If something was, close any reminders still open.
+# day). If something was, close any reminders still open. A pushed note closes
+# today's reminder straight away.
 on:
+  push:
+    branches: [main]
+    paths: ["entries/**"]
   schedule:
     - cron: "30 19 * * *" # 20:30 in London during summer time, 19:30 in winter
   workflow_dispatch:
