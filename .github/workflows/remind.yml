@@ -38,11 +38,6 @@ jobs:
             [ -n "$n" ] && [ "$title" != "TIL for $label" ] && gh issue close "$n" --comment "Skipped that day."
           done
           if ! echo "$open" | grep -q "TIL for $label"; then
-            gh issue create --title "TIL for $label" --body "What did you learn today? From the repo folder:
-
-\`\`\`bash
-./til \"what I learned today\"
-\`\`\`
-
-This issue closes itself once a note for today is pushed."
+            body=$(printf 'What did you learn today? From the repo folder:\n\n    ./til "what I learned today"\n\nThis issue closes itself once a note for today is pushed.')
+            gh issue create --title "TIL for $label" --body "$body"
           fi
