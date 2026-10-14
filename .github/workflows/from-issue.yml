@@ -1,0 +1,53 @@
+name: from-issue
+
+# A "Today I learned" issue opened by me becomes today's note: the note is
+# filed with ./til, then the issue is closed with a link to it. Issues from
+# anyone else are ignored, so strangers cannot write in this log.
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: til
+  cancel-in-progress: false
+
+jobs:
+  file:
+    if: github.event.issue.user.login == github.repository_owner && startsWith(github.event.issue.title, 'TIL:')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: file the note
+        env:
+          BODY: ${{ github.event.issue.body }}
+          TITLE: ${{ github.event.issue.title }}
+        run: |
+          # The form puts the answer under its heading; a plain issue body or
+          # the title works too.
+          note=$(printf '%s\n' "$BODY" | awk '/^### /{f=1; next} f && NF {print}' | tr '\n' ' ' | sed 's/  */ /g; s/^ //; s/ $//')
+          [ -z "$note" ] && note=$(printf '%s' "$BODY" | tr '\n' ' ' | sed 's/  */ /g; s/^ //; s/ $//')
+          [ -z "$note" ] && note=$(printf '%s' "${TITLE#TIL:}" | sed 's/^ //')
+          if [ -z "$note" ] || [ "$note" = "_No response_" ]; then
+            echo "No note found in the issue."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          ./til "$note"
+          echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+
+      - name: close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.issue.number }}
+        run: gh issue close "$NUMBER" --comment "Filed under today's date in ${sha}."

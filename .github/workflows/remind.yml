@@ -8,7 +8,10 @@ on:
     branches: [main]
     paths: ["entries/**"]
   schedule:
-    - cron: "30 19 * * *" # 20:30 in London during summer time, 19:30 in winter
+    # 18:00 in London in summer time, 17:00 in winter. GitHub sometimes starts
+    # scheduled runs hours late, so the step below skips a run that lands after
+    # midnight instead of nagging about a day that has only just begun.
+    - cron: "0 17 * * *"
   workflow_dispatch:
 
 permissions:
@@ -28,10 +31,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          hour=$(TZ=Europe/London date +%-H)
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$hour" -lt 12 ]; then
+            echo "Started too late (after midnight in London); skipping."
+            exit 0
+          fi
           today=$(TZ=Europe/London date +%Y-%m-%d)
           label=$(TZ=Europe/London date '+%-d %b %Y')
           wrote=$(git log --since="${today}T00:00:00" --grep="^TIL: " --format=%H -- entries | head -1)
-          open=$(gh issue list --state open --search "in:title TIL for" --json number,title -q '.[] | "\(.number)\t\(.title)"')
+          open=$(gh issue list --state open --author "app/github-actions" --search 'in:title "TIL for"' --json number,title -q '.[] | "\(.number)\t\(.title)"')
           if [ -n "$wrote" ]; then
             printf '%s\n' "$open" | while IFS="$(printf '\t')" read -r n title; do
               if [ -n "$n" ]; then gh issue close "$n" --comment "Written. See you tomorrow."; fi

@@ -1,0 +1,13 @@
+name: Today I learned
+description: Add today's note from anywhere, the GitHub phone app included.
+title: "TIL: "
+labels: ["til"]
+body:
+  - type: textarea
+    id: note
+    attributes:
+      label: What did you learn?
+      description: One or two sentences in plain words. It is filed under today's date.
+      placeholder: "Reciprocal rank fusion only needs ranks, so BM25 and cosine scores never have to share a scale."
+    validations:
+      required: true
