@@ -50,4 +50,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           NUMBER: ${{ github.event.issue.number }}
-        run: gh issue close "$NUMBER" --comment "Filed under today's date in ${sha}."
+        run: |
+          gh issue close "$NUMBER" --comment "Filed under today's date in ${sha}."
+          # A bot's push does not start other workflows, so close today's
+          # reminder here rather than waiting for the evening check.
+          label=$(TZ=Europe/London date '+%-d %b %Y')
+          gh issue list --state open --author "app/github-actions" --search "in:title \"TIL for $label\"" --json number -q '.[].number' |
+            while read -r n; do gh issue close "$n" --comment "Written in #$NUMBER."; done
