@@ -31,7 +31,7 @@ jobs:
           today=$(TZ=Europe/London date +%Y-%m-%d)
           label=$(TZ=Europe/London date '+%-d %b %Y')
           wrote=$(git log --since="${today}T00:00:00" --grep="^TIL: " --format=%H -- entries | head -1)
-          open=$(gh issue list --state open --search "in:title TIL for" --json number,title -q '.[] | "\(.number)\t\(.title)"')
+          open=$(gh issue list --state open --author "app/github-actions" --search 'in:title "TIL for"' --json number,title -q '.[] | "\(.number)\t\(.title)"')
           if [ -n "$wrote" ]; then
             printf '%s\n' "$open" | while IFS="$(printf '\t')" read -r n title; do
               if [ -n "$n" ]; then gh issue close "$n" --comment "Written. See you tomorrow."; fi
