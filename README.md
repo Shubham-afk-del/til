@@ -5,6 +5,7 @@ A short note most days on something I learned: in my MSc in AI at Northeastern U
 ## Latest
 
 <!-- LATEST:START -->
+- 14 Oct 2026: GitHub awards achievements from a background job, so a badge you already qualify for, like Pull Shark after two merged PRs, can take a day or two to appear.
 - 13 Oct 2026: GitHub only counts a commit on my contribution graph if it's authored with an email linked to my account. My June Notes App commits used my Mac's local address, so they never counted until the author email was fixed.
 <!-- LATEST:END -->
 
