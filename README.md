@@ -5,6 +5,7 @@ A short note most days on something I learned: in my MSc in AI at Northeastern U
 ## Latest
 
 <!-- LATEST:START -->
+- 15 Oct 2026: I solved the majority element problem by counting each number in a dictionary, then returning the one whose count is more than `len(nums)/2`, with `None` as the fallback when no such element exists.
 - 14 Oct 2026: Chained two LLM calls: the first model writes a hard maths question and the second solves it. The second call's content has to be the variable holding the first answer, not the text in quotes.
 - 14 Oct 2026: In `AzureOpenAI(...)`, `api_version` takes a date like `2024-08-01-preview`. The model's name goes in `deployment_name` instead.
 - 13 Oct 2026: Started week 1 of the agentic AI course: `load_dotenv(override=True)` reads my keys from `.env`. `os.getenv` returns `None` for a missing key, while `os.environ[...]` raises a `KeyError`, so for API keys I use `os.environ` and let it fail early.
