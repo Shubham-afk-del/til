@@ -1,16 +1,22 @@
-// Adds today's note, refreshes the README, commits and pushes.
+// Adds today's note, refreshes the README, then sends it to main through a
+// pull request that has to pass scripts/check.mjs before it merges.
 //
 //   ./til "what I learned today"
-//   ./til            (prints today's notes so far)
+//   ./til --direct "..."   (commit straight to main, as the issue workflow does)
+//   ./til                  (prints today's notes so far)
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
+import { latest } from "./notes.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ENTRIES = join(ROOT, "entries");
-const git = (...args) => execFileSync("git", args, { cwd: ROOT, stdio: ["ignore", "pipe", "inherit"] }).toString().trim();
+const run = (cmd, ...args) => execFileSync(cmd, args, { cwd: ROOT, stdio: ["ignore", "pipe", "inherit"] }).toString().trim();
+const git = (...args) => run("git", ...args);
+const gh = (...args) => run("gh", ...args);
 
 const now = new Date();
 const part = (opts) => now.toLocaleDateString("en-GB", { timeZone: "Europe/London", ...opts });
@@ -19,12 +25,18 @@ const month = `${part({ year: "numeric" })}-${part({ month: "2-digit" })}`; // 2
 const file = join(ENTRIES, `${month}.md`);
 const heading = `## ${day}`;
 
-const note = process.argv.slice(2).join(" ").trim();
+const args = process.argv.slice(2);
+const direct = args[0] === "--direct" || process.env.GITHUB_ACTIONS === "true";
+const note = (args[0] === "--direct" ? args.slice(1) : args).join(" ").trim();
 if (!note) {
   const text = existsSync(file) ? readFileSync(file, "utf8") : "";
   const today = text.split(heading)[1]?.split("\n## ")[0]?.trim();
   console.log(today ? `${heading}\n\n${today}` : `Nothing yet for ${day}. Add one with: ./til "what you learned"`);
   process.exit(0);
+}
+if (/[–—]/.test(note)) {
+  console.error("Use a comma or a full stop instead of a long dash.");
+  process.exit(1);
 }
 
 try {
@@ -51,28 +63,78 @@ if (text.includes(`${heading}\n`)) {
 writeFileSync(file, text.replace(/\n{3,}/g, "\n\n"));
 
 // README: the five latest notes, newest first.
-const latest = [];
-for (const name of readdirSync(ENTRIES).filter((n) => n.endsWith(".md")).sort().reverse()) {
-  const days = readFileSync(join(ENTRIES, name), "utf8").split("\n## ").slice(1);
-  for (const block of days) {
-    const [date, ...lines] = block.split("\n");
-    for (const ln of lines.filter((l) => l.startsWith("- "))) latest.push(`- ${date.trim()}: ${ln.slice(2)}`);
-    if (latest.length >= 5) break;
-  }
-  if (latest.length >= 5) break;
-}
 const readmePath = join(ROOT, "README.md");
 const readme = readFileSync(readmePath, "utf8").replace(
   /<!-- LATEST:START -->[\s\S]*?<!-- LATEST:END -->/,
-  `<!-- LATEST:START -->\n${latest.slice(0, 5).join("\n")}\n<!-- LATEST:END -->`,
+  `<!-- LATEST:START -->\n${latest(ENTRIES).join("\n")}\n<!-- LATEST:END -->`,
 );
 writeFileSync(readmePath, readme);
 
-git("add", "entries", "README.md");
-git("commit", "--quiet", "-m", `TIL: ${note.length > 60 ? `${note.slice(0, 59)}…` : note}`);
 try {
-  git("push", "--quiet");
-  console.log(`Saved under ${day} and pushed.`);
+  run("node", join(ROOT, "scripts", "check.mjs"));
 } catch {
-  console.log(`Saved under ${day}. The push failed; run "git push" in ${ROOT} when you're online.`);
+  console.error(`The note is written but not committed: fix the files above in ${ROOT}, then run ./til again.`);
+  process.exit(1);
 }
+
+const subject = `TIL: ${note.length > 60 ? `${note.slice(0, 59)}…` : note}`;
+const hasGh = () => {
+  try {
+    execFileSync("gh", ["auth", "status"], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+if (direct || !hasGh()) {
+  git("add", "entries", "README.md");
+  git("commit", "--quiet", "-m", subject);
+  try {
+    git("push", "--quiet");
+    console.log(`Saved under ${day} and pushed.`);
+  } catch {
+    console.log(`Saved under ${day}. The push failed; run "git push" in ${ROOT} when you're online.`);
+  }
+  process.exit(0);
+}
+
+// A branch and a pull request for the note; it merges once the check passes.
+const iso = `${month}-${part({ day: "2-digit" })}`;
+const branch = `til/${iso}-${Date.now().toString(36).slice(-5)}`;
+git("switch", "--quiet", "-c", branch);
+git("add", "entries", "README.md");
+git("commit", "--quiet", "-m", subject);
+git("push", "--quiet", "-u", "origin", branch);
+const url = gh("pr", "create", "--base", "main", "--head", branch, "--title", subject, "--body", `Today's note, filed with \`./til\`. It merges once the format check passes.`);
+const number = url.split("/").pop();
+
+let outcome = "pending";
+for (const deadline = Date.now() + 5 * 60 * 1000; Date.now() < deadline; ) {
+  await sleep(6000);
+  let buckets = "";
+  try {
+    buckets = gh("pr", "checks", number, "--json", "bucket", "--jq", '[.[].bucket] | join(",")');
+  } catch (error) {
+    buckets = error.stdout?.toString().trim() ?? ""; // gh exits non-zero while checks are pending
+  }
+  if (!buckets) continue;
+  if (/fail|cancel/.test(buckets)) {
+    outcome = "failed";
+    break;
+  }
+  if (!/pending/.test(buckets)) {
+    outcome = "passed";
+    break;
+  }
+}
+
+if (outcome !== "passed") {
+  git("switch", "--quiet", "main");
+  console.log(`Saved under ${day} in ${url}, but the check ${outcome === "failed" ? "failed" : "did not finish"}; it stays open until that's sorted.`);
+  process.exit(1);
+}
+gh("pr", "merge", number, "--squash", "--delete-branch");
+git("switch", "--quiet", "main");
+git("pull", "--quiet", "--rebase");
+console.log(`Saved under ${day} and pushed, merged in #${number}.`);

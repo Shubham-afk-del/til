@@ -16,4 +16,4 @@ A short note most days on something I learned: in my MSc in AI at Northeastern U
 ./til "what I learned today"
 ```
 
-The script files the note under today's date, refreshes the list above, commits and pushes. Away from my laptop, I open a [Today I learned issue](../../issues/new?template=til.yml) instead, from the GitHub app if need be, and a workflow files it the same way. If a day goes by without a note, another workflow opens a reminder issue in the evening and closes it once I've written one.
+The script files the note under today's date, refreshes the list above and opens a pull request for it. A check makes sure the days are in order, none is empty and the list matches, and the pull request merges once it passes. Away from my laptop, I open a [Today I learned issue](../../issues/new?template=til.yml) instead, from the GitHub app if need be, and a workflow files it straight to main, where the same check runs. If a day goes by without a note, another workflow opens a reminder issue in the evening and closes it once I've written one.
