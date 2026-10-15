@@ -1,0 +1,26 @@
+name: check
+
+# Every note reaches main through a pull request from ./til, and this has to
+# pass first. It also runs on pushes, which covers notes filed from an issue.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths: ["entries/**", "README.md", "scripts/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - run: node scripts/check.mjs
