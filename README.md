@@ -5,11 +5,11 @@ A short note most days on something I learned: in my MSc in AI at Northeastern U
 ## Latest
 
 <!-- LATEST:START -->
+- 16 Oct 2026: I solved the intersection of two arrays in Python by turning `nums2` into a set for fast membership checks and collecting matches from `nums1` into another set, so each common value appears only once in the result.
 - 15 Oct 2026: I solved the majority element problem by counting each number in a dictionary, then returning the one whose count is more than `len(nums)/2`, with `None` as the fallback when no such element exists.
 - 15 Oct 2026: I worked on the valid anagram problem by building a letter count dictionary for each string and returning `box==box2`, since two dictionaries compare equal when they hold the same keys with the same counts.
 - 14 Oct 2026: Chained two LLM calls: the first model writes a hard maths question and the second solves it. The second call's content has to be the variable holding the first answer, not the text in quotes.
 - 14 Oct 2026: In `AzureOpenAI(...)`, `api_version` takes a date like `2024-08-01-preview`. The model's name goes in `deployment_name` instead.
-- 13 Oct 2026: Started week 1 of the agentic AI course: `load_dotenv(override=True)` reads my keys from `.env`. `os.getenv` returns `None` for a missing key, while `os.environ[...]` raises a `KeyError`, so for API keys I use `os.environ` and let it fail early.
 <!-- LATEST:END -->
 
 ## How I add one
