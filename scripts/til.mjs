@@ -77,7 +77,9 @@ try {
   process.exit(1);
 }
 
-const subject = `TIL: ${note.length > 60 ? `${note.slice(0, 59)}…` : note}`;
+// The bold topic label reads well on the page but not in a commit title.
+const plain = note.replace(/\*\*/g, "");
+const subject = `TIL: ${plain.length > 60 ? `${plain.slice(0, 59)}…` : plain}`;
 const hasGh = () => {
   try {
     execFileSync("gh", ["auth", "status"], { stdio: "ignore" });
