@@ -5,11 +5,11 @@ A short note most days on something I learned: in my MSc in AI at Northeastern U
 ## Latest
 
 <!-- LATEST:START -->
+- 19 Oct 2026: **Running Sum of 1d Array (prefix sum):** I wrote `running_sum(nums)` that keeps a `total` variable, adds each `num` to it and appends the new total to `new_list`, and tested it on `[1,2,3,4]`, a longer list and an empty list. Carrying the total forward means each element is added once, so it runs in O(n) time with O(n) space for the output list, instead of re-summing the prefix for every index.
 - 18 Oct 2026: **Top K Frequent Elements (hash map):** I counted each number in a `box` dictionary with an `if num in box` / `else` check, then sorted `box.items()` and kept the first `k` keys. My sort uses `key=lambda x:x[0]`, which orders by the number itself instead of its count, so on `[1,1,1,2,3,3]` it returns `[3,2]` instead of `[1,3]`; switching to `x[1]` fixes it and keeps the cost at O(n log n).
 - 18 Oct 2026: **LLM APIs (chained prompts):** I asked the model for a difficult computer science question, read it from `response.choices[0].message.content`, and sent that text back as a fresh `user` message in a second `chat.completions.create` call. Each call is stateless, so the second answer only knows about the question because I put it in the new `messages` list myself.
 - 17 Oct 2026: **Group Anagrams (hash map):** I grouped words by using `"".join(sorted(word))` as a dictionary key, so every anagram of a word lands in the same list. Sorting each word costs O(k log k), so one pass over n words is O(n k log k) instead of comparing every pair.
 - 17 Oct 2026: **LLM APIs (Azure OpenAI):** I wrote a chat request to a `gpt-5-mini` deployment with `client.chat.completions.create`, passing the Azure deployment name as `model` and reading the reply from `response.choices[0].message.content`. Comparing my earlier attempts, the client has to be `AzureOpenAI`, not `OpenAI`, and `api_version` needs the full date, `2024-08-01-preview`.
-- 16 Oct 2026: I solved the intersection of two arrays in Python by turning `nums2` into a set for fast membership checks and collecting matches from `nums1` into another set, so each common value appears only once in the result.
 <!-- LATEST:END -->
 
 ## How I add one
