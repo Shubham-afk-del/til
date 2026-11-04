@@ -3,6 +3,7 @@
 //
 //   ./til "what I learned today"
 //   ./til --direct "..."   (commit straight to main, as the issue workflow does)
+//   ./til --again "..."    (file it even if a note with the same label exists)
 //   ./til                  (prints today's notes so far)
 
 import { execFileSync } from "node:child_process";
@@ -10,7 +11,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import { latest } from "./notes.mjs";
+import { days, latest } from "./notes.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ENTRIES = join(ROOT, "entries");
@@ -26,8 +27,10 @@ const file = join(ENTRIES, `${month}.md`);
 const heading = `## ${day}`;
 
 const args = process.argv.slice(2);
-const direct = args[0] === "--direct" || process.env.GITHUB_ACTIONS === "true";
-const note = (args[0] === "--direct" ? args.slice(1) : args).join(" ").trim();
+const flags = new Set();
+while (["--direct", "--again"].includes(args[0])) flags.add(args.shift());
+const direct = flags.has("--direct") || process.env.GITHUB_ACTIONS === "true";
+const note = args.join(" ").trim();
 if (!note) {
   const text = existsSync(file) ? readFileSync(file, "utf8") : "";
   const today = text.split(heading)[1]?.split("\n## ")[0]?.trim();
@@ -43,6 +46,19 @@ try {
   git("pull", "--quiet", "--rebase");
 } catch {
   console.warn("Could not pull first; carrying on with the local copy.");
+}
+
+// The same bold topic label twice is usually the same lesson twice: a re-solve
+// noted again. A note from an issue was typed on purpose, so it is let through.
+const labelOf = (text) => text.match(/^\*\*(.+?)\*\*/)?.[1].replace(/:$/, "").trim();
+const key = (label) => label?.replace(/\s+/g, " ").toLowerCase();
+const label = labelOf(note);
+if (label && !flags.has("--again") && process.env.GITHUB_ACTIONS !== "true" && existsSync(ENTRIES)) {
+  const earlier = days(ENTRIES).find((d) => d.notes.some((n) => key(labelOf(n)) === key(label)));
+  if (earlier) {
+    console.error(`A note called "${label}" is already in the log (${earlier.date}). Give this one a new label if it teaches something new, or file it anyway with ./til --again "...".`);
+    process.exit(1);
+  }
 }
 
 // Append under today's heading (newest day first in each month's file).
